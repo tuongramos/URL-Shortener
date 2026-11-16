@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f6ef" />
+    <meta name="description" content="Tạo liên kết ngắn để chia sẻ dễ dàng hơn. Dán URL, rút gọn và sao chép chỉ trong vài thao tác." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%231d4634'/%3E%3Cpath d='M13 24l11-11M11 17l-2 2a7 7 0 0010 10l3-3M18 14l3-3a7 7 0 0110 10l-2 2' fill='none' stroke='%23d9f4a4' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <title>Rút gọn liên kết</title>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="/" aria-label="Liên kết — Trang chủ">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m9 15 6-6m-7 1-2 2a4.24 4.24 0 0 0 6 6l2-2m-4-8 2-2a4.24 4.24 0 0 1 6 6l-2 2"/></svg>
+          </span>
+          liên kết<span class="brand-dot">.</span>
+        </a>
+        <span class="header-note">Gọn hơn. Dễ chia sẻ hơn.</span>
+      </header>
+
+      <main>
+        <section class="shortener" aria-labelledby="page-title">
+          <div class="intro">
+            <span class="eyebrow"><span aria-hidden="true"></span> MỘT LIÊN KẾT, ÍT KÝ TỰ HƠN</span>
+            <h1 id="page-title">Rút gọn <span>liên kết</span></h1>
+            <p>Tạo liên kết ngắn để chia sẻ dễ dàng hơn.</p>
+          </div>
+
+          <div class="workspace">
+            <form id="shorten-form" novalidate>
+              <label for="long-url">Dán liên kết của bạn</label>
+              <div class="input-row">
+                <div class="input-wrap">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m9 15 6-6m-7 1-2 2a4.24 4.24 0 0 0 6 6l2-2m-4-8 2-2a4.24 4.24 0 0 1 6 6l-2 2"/></svg>
+                  <input id="long-url" name="long_url" type="url" inputmode="url" autocomplete="url" placeholder="https://example.com/lien-ket-cua-ban" aria-describedby="url-hint url-error" required />
+                </div>
+                <button id="submit-button" class="button button-primary" type="submit">
+                  <span id="submit-label">Rút gọn</span><span class="button-arrow" aria-hidden="true">↗</span>
+                </button>
+              </div>
+              <p id="url-hint" class="hint">Hỗ trợ liên kết bắt đầu bằng http:// hoặc https://.</p>
+              <p id="url-error" class="error" role="alert" hidden></p>
+            </form>
+
+            <section id="result" class="result" aria-labelledby="result-title" hidden>
+              <div class="result-heading"><span class="success-icon" aria-hidden="true">✓</span><h2 id="result-title">Liên kết đã sẵn sàng</h2></div>
+              <a id="short-link" class="short-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+              <div class="result-actions">
+                <button id="copy-button" class="button button-copy" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg><span id="copy-label">Sao chép</span></button>
+                <a id="open-link" class="button button-open" href="#" target="_blank" rel="noopener noreferrer">Mở liên kết <span aria-hidden="true">↗</span></a>
+              </div>
+              <div id="manual-copy" class="manual-copy" hidden>
+                <label for="copy-value">Chọn và sao chép liên kết bằng tay</label>
+                <input id="copy-value" type="text" readonly />
+              </div>
+              <div class="original"><span>LIÊN KẾT GỐC</span><p id="original-url"></p></div>
+            </section>
+            <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+          </div>
+
+          <div class="steps" aria-label="Cách sử dụng">
+            <span><b>01</b> Dán liên kết</span><span class="step-line" aria-hidden="true"></span>
+            <span><b>02</b> Rút gọn</span><span class="step-line" aria-hidden="true"></span>
+            <span><b>03</b> Chia sẻ</span>
+          </div>
+        </section>
+      </main>
+
+      <footer><span>Đường dẫn gọn. Kết nối trọn vẹn.</span><span>URL Shortener <span aria-hidden="true">↗</span></span></footer>
+    </div>
+    <noscript>Bạn cần bật JavaScript để rút gọn liên kết.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
