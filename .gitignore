@@ -11,3 +11,14 @@ backend/data/*
 *.log
 coverage/
 test-results/
+.gradle/
+.kotlin/
+.idea/
+local.properties
+**/build/
+*.iml
+server/data/*
+!server/data/.gitkeep
+*.jks
+*.keystore
+captures/

@@ -1,119 +1,140 @@
-# URL Shortener
+# Liên kết — URL Shortener Android / Kotlin
 
-Ứng dụng rút gọn URL theo `QUY_TRINH_THUC_HIEN_URL_SHORTENER.md`: Python/FastAPI, SQLite, Base62, cache RAM TTL/LRU và TypeScript thuần với Vite. Giao diện tiếng Việt, không dùng React. Bản đầu chạy một tiến trình, dùng cho Chapter 8 và nhu cầu nhỏ.
+Ứng dụng Android native bằng **Kotlin + Jetpack Compose**, backend **Kotlin + Ktor**, lưu trữ SQLite. Các model và kiểm tra URL được dùng chung bằng Kotlin. Không dùng WebView, Python, TypeScript hoặc Node.js để chạy bản hiện tại.
 
-## Chạy trên máy hiện tại
+Giao diện giữ nền xanh nhạt, thẻ trắng, nút xanh đậm, nội dung tiếng Việt và luồng thao tác của thiết kế đã chốt; bố cục được chuyển sang màn hình điện thoại. Mã web/Python cũ đã được bỏ theo yêu cầu. Tài liệu quy trình gốc được giữ làm tài liệu lịch sử; bộ hướng dẫn chạy bên dưới áp dụng cho bản Kotlin.
 
-Môi trường `.venv`, thư viện frontend và bản build đã được chuẩn bị. Mở PowerShell tại thư mục dự án:
+## Mở trong Android Studio
 
-```powershell
+1. Chọn **File → Open** và mở chính thư mục **D:\Projects\URL Shortener** (nơi có settings.gradle.kts).
+2. Chờ Gradle Sync. Dùng **Gradle JDK là JDK đi kèm Android Studio**, hoặc JDK phù hợp đã cài; không dùng Java 8 cũ trong PATH.
+3. Chọn cấu hình chạy **app**, chọn emulator/điện thoại và bấm Run.
+4. Chạy server ở terminal riêng và nối cổng như bên dưới.
+
+Dự án gồm ba module: **app** (Android/Compose), **server** (Ktor/JVM), **shared** (model JSON và URL validator). Android Studio Preview có sẵn trạng thái ban đầu và kết quả trong ShortenerScreen.kt.
+
+## Chạy demo cục bộ trên máy hiện tại
+
+Terminal PowerShell thứ nhất, tại gốc dự án:
+
+~~~powershell
 .\scripts\start.ps1
-```
+~~~
 
-Mở **http://127.0.0.1:8000**. API tương tác tại **http://127.0.0.1:8000/docs**. Dừng bằng `Ctrl+C`. Nếu cổng 8000 đang có server, dùng server đó hoặc dừng nó trước khi chạy lại.
+Lệnh này hiện chạy **Ktor**, không chạy FastAPI. Giữ terminal mở. Mặc định server tại http://127.0.0.1:8000, tài liệu API tại http://127.0.0.1:8000/docs.
 
-Nếu PowerShell chặn tệp `.ps1`, có thể chạy trực tiếp, không cần đổi chính sách thực thi của máy:
+Mở AVD có sẵn trong **Device Manager** của Android Studio. Terminal thứ hai:
 
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
-```
+~~~powershell
+.\scripts\run-android.ps1
+~~~
 
-## Cài đặt từ đầu
+Nếu có nhiều thiết bị:
 
-Cần Python 3.12 hoặc 3.13 và Node.js 22.12+ thuộc một nhánh còn được hỗ trợ. Môi trường đã kiểm thử: Python 3.12.14, Node.js 24.14.0, npm 11.13.0, SQLite 3.53.1. Các phiên bản phụ thuộc Python được chốt trong requirements; npm sử dụng `package-lock.json`.
+~~~powershell
+.\scripts\run-android.ps1 -Serial emulator-5554
+~~~
 
-```powershell
-python --version
-node --version
-npm.cmd --version
+Script build APK, thực hiện **adb reverse tcp:8000 tcp:8000**, cài app và mở app. Nhờ ánh xạ cổng này, app và trình duyệt trên emulator/điện thoại USB có thể dùng cùng URL http://127.0.0.1:8000 như máy tính. Đây là cách demo không cần Internet, IP LAN hoặc thay đổi firewall. Nếu rút USB/khởi động lại emulator, chạy lại bước nối cổng.
+
+URL đích ngoại tuyến để dán vào app:
+
+~~~text
+http://127.0.0.1:8000/demo/target?chapter=8#chapter-8
+~~~
+
+Rút gọn → Sao chép toàn bộ URL ngắn → Mở liên kết hoặc dán vào trình duyệt. Server phải đang chạy. Mã đơn lẻ như “a” chưa phải một URL đầy đủ.
+
+## Cài và build từ đầu
+
+Cần Android Studio, Android SDK Platform 37, Build Tools 36.0.0, Platform-Tools và JDK 17+ tương thích Gradle 9.4.1. Máy hiện tại dùng JDK 25 đi kèm Android Studio. Gradle Wrapper đã kèm mã kiểm tra SHA-256 của bản phân phối.
+
+~~~powershell
 .\scripts\setup.ps1
-.\scripts\start.ps1
-```
+~~~
 
-Nếu Python không nằm trong PATH, truyền đường dẫn Python đã cài:
+Lệnh cài/build chạy ba module Kotlin và các kiểm thử JVM. Không cài Python hoặc Node.js. Lần đầu cần mạng để tải Gradle/Maven; sau khi tải phụ thuộc, luồng demo với trang đích cục bộ không cần Internet.
 
-```powershell
-.\scripts\setup.ps1 -Python 'C:\duong-dan\Python312\python.exe'
-```
+Nếu cần chỉ build:
 
-Hoặc cài thủ công:
+~~~powershell
+.\scripts\setup.ps1 -SkipTests
+~~~
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
-Copy-Item .env.example .env
-Push-Location frontend
-npm.cmd ci
-npm.cmd run build
-npm.cmd test
-Pop-Location
-.\.venv\Scripts\python.exe -m pytest
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
-```
+APK debug ở **app/build/outputs/apk/debug/app-debug.apk**. Có thể cài APK này trên thiết bị Android 8.0/API 26 trở lên. Bản debug cho phép HTTP để nối server cục bộ; bản release mặc định không cho HTTP rõ văn bản và cần cấu hình HTTPS phù hợp trước khi dùng như bản phát hành.
 
-Chỉ sao chép `.env.example` nếu chưa có `.env`; giữ cấu hình riêng khi cài lại. Môi trường Python hiện tại được tạo từ Python đi kèm Codex vì máy chưa đăng ký Python hệ thống. Khi chuyển máy hoặc gỡ runtime đó, tạo lại `.venv` bằng Python đã cài; không sao chép `.venv` giữa các máy.
+Nếu PowerShell chặn script, có thể dùng terminal Android Studio và Gradle trực tiếp sau khi đặt JAVA_HOME:
 
-## Phát triển giao diện
+~~~powershell
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+.\gradlew.bat :server:run
+# Terminal khác:
+.\gradlew.bat :app:assembleDebug
+~~~
 
-Chạy backend ở terminal thứ nhất. Terminal thứ hai:
+## Kết nối điện thoại qua Wi-Fi LAN nếu cần
 
-```powershell
-Set-Location frontend
-npm.cmd run dev
-```
+Mặc định ưu tiên emulator/USB với adb reverse. Nếu không dùng USB:
 
-Mở http://127.0.0.1:5173. Vite proxy `/api` và `/r` đến backend; frontend gọi API tương đối nên không cần CORS. URL ngắn lấy từ `PUBLIC_BASE_URL`, mặc định vẫn ở cổng 8000. Sau thay đổi giao diện, chạy lại `npm.cmd run build` rồi khởi động lại backend để phục vụ bản mới. Vite preview chỉ phục vụ tệp tĩnh, không thay thế backend tích hợp.
+1. Đặt PUBLIC_BASE_URL trong .env thành http://IP-LAN-CUA-MAY-TINH:8000.
+2. Chạy server với .\scripts\start.ps1 -BindAddress 0.0.0.0.
+3. Trong app bấm dấu ba chấm cạnh phần đầu trang, nhập cùng địa chỉ LAN trong **Kết nối máy chủ**.
+4. Máy tính và điện thoại phải truy cập được nhau; kiểm tra cấu hình mạng/firewall của máy theo nhu cầu thực tế.
 
-## Cấu hình
+Không dùng địa chỉ 10.0.2.2 làm URL chia sẻ chung cho máy tính và điện thoại thật: đó là địa chỉ đặc biệt của emulator. Dự án chưa được đưa lên Internet.
 
-Ứng dụng đọc `.env` ở gốc dự án, biến môi trường hệ điều hành được ưu tiên. Đường dẫn DB tương đối luôn tính theo gốc dự án, không theo thư mục terminal.
+## Cấu hình server
 
-| Biến | Mặc định khi không có `.env` | Ý nghĩa |
+Ứng dụng đọc .env ở gốc dự án, biến môi trường được ưu tiên. Không ghi đè .env đã tồn tại.
+
+| Biến | Mặc định | Vai trò |
 | --- | --- | --- |
-| `PUBLIC_BASE_URL` | `http://127.0.0.1:8000` | Origin HTTP/HTTPS, không có path/query/fragment |
-| `DATABASE_PATH` | `backend/data/shortener.db` | SQLite bền vững |
-| `CACHE_MAX_ITEMS` | `1000` | Số ánh xạ tối đa, loại bỏ theo LRU |
-| `CACHE_TTL_SECONDS` | `300` | TTL tính từ lúc nạp, không gia hạn khi hit |
-| `DEMO_MODE` | `false` | Bật các API thống kê và quản lý cache |
+| PUBLIC_BASE_URL | http://127.0.0.1:8000 | Origin dùng trong URL ngắn, không kèm path/query/fragment |
+| DATABASE_PATH | server/data/shortener.db | Đường dẫn SQLite tương đối theo gốc dự án |
+| CACHE_MAX_ITEMS | 1000 | Dung lượng cache LRU |
+| CACHE_TTL_SECONDS | 300 | TTL từ lúc nạp, HIT không gia hạn |
+| DEMO_MODE | false | Bật API thống kê/clear/reset; .env.example đặt true cho demo |
+| SERVER_HOST | 127.0.0.1 | Địa chỉ server lắng nghe |
+| SERVER_PORT | 8000 | Cổng server |
 
-`.env.example` bật `DEMO_MODE=true` cho buổi báo cáo cục bộ. Khởi động lại server sau khi đổi cấu hình. Cache chỉ nạp khi redirect; tạo URL, metadata và health không nạp cache. Clear cache giữ DB và bộ đếm; reset bộ đếm giữ cache. Khởi động lại chỉ giữ DB.
+**Giữ dữ liệu cũ:** .env hiện tại vẫn có thể trỏ tới backend/data/shortener.db. Ktor đọc được đúng schema SQLite của bản trước; không cần Python để sử dụng tệp đó. Khi cài mới, .env.example dùng server/data/shortener.db. Không xóa hoặc đổi DATABASE_PATH nếu muốn tiếp tục dùng các mã đã tạo.
 
-## Kiểm thử và demo
+BindAddress/Port quyết định nơi server lắng nghe; chúng không tự thay PUBLIC_BASE_URL. Khi đổi cổng, cần đồng bộ origin của server, kết nối app và ánh xạ adb reverse.
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest
-Push-Location frontend
-npm.cmd run build
-npm.cmd test
-Pop-Location
-# Cần backend đang chạy và DEMO_MODE=true:
-.\.venv\Scripts\python.exe scripts/demo_check.py
-```
+## Kiểm thử
 
-Backend có 58 kiểm thử, dùng DB tạm, cache riêng và đồng hồ giả cho TTL; không xóa DB thật, không truy cập Internet. Bao gồm yêu cầu trùng đồng thời, URL có query/fragment, 301/302, LRU/TTL, bộ đếm, tắt demo và khởi động lại. Frontend có 12 kiểm thử Vitest/happy-dom cho gửi lặp, lỗi kết nối, timeout, nội dung an toàn và clipboard bị chặn; đây là kiểm thử DOM mô phỏng, bổ sung cho thao tác trên Chrome. Script HTTP demo sẽ tạo liên kết mẫu và reset bộ đếm/cache trong phiên server đang chạy; nên chạy riêng lúc tập demo. Xem [kịch bản demo](docs/DEMO.md), [đặc tả API](docs/API.md) và [kết quả nghiệm thu](docs/VERIFICATION.md).
+~~~powershell
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+.\gradlew.bat :shared:test :server:test :app:testDebugUnitTest :app:assembleDebug
 
-## Cấu trúc
+# Cần emulator hoặc điện thoại đã kết nối:
+.\gradlew.bat :app:connectedDebugAndroidTest
 
-Để chuẩn bị giải thích code khi demo, đọc [GIAI_THICH_CODE.md](docs/GIAI_THICH_CODE.md): từng hàm backend/frontend, script, kiểm thử, ví dụ chạy và các câu hỏi thường gặp.
+# Cần server đang chạy, DEMO_MODE=true:
+.\gradlew.bat :server:demoCheck
+~~~
 
-```text
-backend/app/      FastAPI, cấu hình, SQLite, Base62, service và cache
-backend/tests/    Kiểm thử thuật toán, API, đồng thời và lưu trữ
-backend/data/     SQLite lúc chạy (không đưa vào source)
-frontend/src/     TypeScript, CSS; HTML ở frontend/index.html
-frontend/dist/    Bản build do FastAPI phục vụ (được tạo lại)
-scripts/          Cài đặt, khởi động và kiểm tra HTTP
-docs/             API, kịch bản demo, nghiệm thu và trang đích ngoại tuyến
-```
+Kiểm thử tự động dùng DB tạm và cache riêng. Kịch bản demoCheck gọi HTTP thật, tạo/dùng lại liên kết mẫu và clear/reset cache/counters của server đang chạy; tránh các request khác xen vào khi kiểm tra số đếm.
 
-Không có tài khoản, mã tùy chọn, QR, sửa/xóa liên kết hoặc dashboard. Cùng URL sau khi trim và cùng 301/302 dùng lại một bản ghi; hai chế độ dùng mã riêng. URL được kiểm tra cấu trúc, không tải trang đích. Không bỏ query, fragment hoặc chuẩn hóa lại chuỗi trước khi lưu. Header `Location` giữ nguyên các URL ASCII/percent-encoded; ký tự Unicode trong URL được lớp HTTP percent-encode khi cần. Mã Base62 phân biệt chữ hoa/thường, biến thiên độ dài và không cắt mã.
+## Cấu trúc và tài liệu
 
-## Dùng từ thiết bị khác
+~~~text
+app/src/main/kotlin/vn/lienket/app/       Activity, ViewModel, repository và Compose UI
+app/src/test/                            Kiểm thử trạng thái app trên JVM
+app/src/androidTest/                     Kiểm thử Compose trên thiết bị
+server/src/main/kotlin/vn/lienket/server/ Ktor, SQLite, Base62, cache và CLI demo
+server/src/test/                         Kiểm thử backend Kotlin
+shared/src/main/kotlin/vn/lienket/shared/ Model JSON và URL validator
+scripts/                                Script PowerShell chạy/build/cài app
+docs/                                   API, demo, giải thích Kotlin, nghiệm thu
+~~~
 
-`127.0.0.1` chỉ dùng trên chính máy này. Với LAN, đặt `PUBLIC_BASE_URL=http://<IP-LAN>:8000`, khởi động với `--host 0.0.0.0` và kiểm tra truy cập từ máy khác. Cấu hình firewall phù hợp khi thực sự cần. Bản bàn giao chưa triển khai Internet. Trước khi công khai: có HTTPS, địa chỉ cố định, ổ lưu DB bền vững và sao lưu; đặt `DEMO_MODE=false`, bổ sung rate limiting và xử lý lạm dụng. Cache/bộ đếm chỉ nhất quán trong một tiến trình, không chạy nhiều worker cho bản demo.
+- [DEMO.md](docs/DEMO.md): kịch bản báo cáo Chapter 8 trên app Android.
+- [API.md](docs/API.md): request, response và lỗi của server Ktor.
+- [GIAI_THICH_CODE.md](docs/GIAI_THICH_CODE.md): giải thích các hàm Kotlin.
+- [CHAPTER_8_ALIGNMENT.md](docs/CHAPTER_8_ALIGNMENT.md): đối chiếu nội dung chương sách.
+- [VERIFICATION.md](docs/VERIFICATION.md): kết quả build/kiểm thử và giới hạn đã xác minh.
 
-## Tham khảo
+SQLite cấp ID, Base62 dùng bảng 0-9/a-z/A-Z và không cắt mã. Cùng URL sau trim + cùng chế độ trả lại liên kết cũ. Cache chỉ nạp trong redirect, metadata không tăng counters. Clear cache không xóa DB/reset counters; reset counters không xóa cache. Bản đầu chạy một process, chưa có ID phân tán, load balancer, analytics hoặc rate limiting.
 
-Đã đối chiếu dự án với Chapter 8 của sách người dùng cung cấp. Xem [CHAPTER_8_ALIGNMENT.md](docs/CHAPTER_8_ALIGNMENT.md) để ghép phần lý thuyết với demo, phân biệt phạm vi một máy chủ với thiết kế phân tán và kiểm tra các phép ước lượng trong PDF.
-
-[FastAPI lifespan/testing](https://fastapi.tiangolo.com/advanced/testing-events/), [FastAPI static files](https://fastapi.tiangolo.com/tutorial/static-files/), [Vite](https://vite.dev/guide/), [Python sqlite3](https://docs.python.org/3/library/sqlite3.html), [SQLite WAL](https://www.sqlite.org/wal.html).
+Nguồn cấu hình: [Android Compose](https://developer.android.com/develop/ui/compose/setup-compose-dependencies-and-compiler), [AGP 9.2](https://developer.android.com/build/releases/agp-9-2-0-release-notes), [Ktor](https://ktor.io/docs/server-create-a-new-project.html).

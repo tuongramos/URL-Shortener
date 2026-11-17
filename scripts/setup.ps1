@@ -1,33 +1,10 @@
-param(
-    [string]$Python = "python",
-    [switch]$SkipTests
-)
-
-$ErrorActionPreference = "Stop"
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
-
-function Invoke-Checked {
-    param([string]$Executable, [string[]]$Arguments)
-    & $Executable @Arguments
-    if ($LASTEXITCODE -ne 0) { throw "Lệnh thất bại: $Executable $($Arguments -join ' ')" }
+param([switch]$SkipTests)
+. (Join-Path $PSScriptRoot 'common.ps1')
+$ProjectRoot = Initialize-KotlinEnvironment
+if (-not (Test-Path -LiteralPath (Join-Path $ProjectRoot '.env'))) {
+    Copy-Item -LiteralPath (Join-Path $ProjectRoot '.env.example') -Destination (Join-Path $ProjectRoot '.env')
 }
-
-Push-Location -LiteralPath $ProjectRoot
-try {
-    if (-not (Test-Path -LiteralPath ".venv\Scripts\python.exe")) {
-        Invoke-Checked $Python @("-m", "venv", ".venv")
-    }
-    $VenvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-    Invoke-Checked $VenvPython @("-m", "pip", "install", "-r", "backend/requirements-dev.txt")
-    if (-not (Test-Path -LiteralPath ".env")) {
-        Copy-Item -LiteralPath ".env.example" -Destination ".env"
-    }
-    Push-Location -LiteralPath "frontend"
-    try {
-        Invoke-Checked "npm.cmd" @("ci", "--no-audit", "--no-fund")
-        Invoke-Checked "npm.cmd" @("run", "build")
-        if (-not $SkipTests) { Invoke-Checked "npm.cmd" @("test") }
-    } finally { Pop-Location }
-    if (-not $SkipTests) { Invoke-Checked $VenvPython @("-m", "pytest") }
-    Write-Host "Sẵn sàng. Chạy: .\scripts\start.ps1" -ForegroundColor Green
-} finally { Pop-Location }
+$Tasks = @(':app:assembleDebug', ':server:installDist')
+if (-not $SkipTests) { $Tasks += @(':shared:test', ':server:test', ':app:testDebugUnitTest') }
+Invoke-Gradle $ProjectRoot $Tasks
+Write-Host 'APK: app\build\outputs\apk\debug\app-debug.apk' -ForegroundColor Green

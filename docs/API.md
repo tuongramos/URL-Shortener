@@ -1,60 +1,57 @@
-# API URL Shortener v1
+# API URL Shortener — Kotlin / Ktor
 
-Base URL mặc định: `http://127.0.0.1:8000`. OpenAPI: `/openapi.json`; Swagger UI: `/docs`.
+Base URL: http://127.0.0.1:8000. Trang /docs do server Ktor phục vụ mô tả endpoint; bản này không dùng Swagger/FastAPI. Kiểm chứng tương tác bằng task Kotlin **:server:demoCheck** hoặc công cụ HTTP.
 
-| Phương thức | Đường dẫn | Kết quả |
+| Method | Path | Kết quả |
 | --- | --- | --- |
-| GET | `/api/v1/health` | 200 `{"status":"ok"}` khi đọc được DB |
-| POST | `/api/v1/links` | 201 tạo mới, 200 tái sử dụng |
-| GET | `/api/v1/links/{code}` | 200 metadata, 404 không có mã |
-| GET | `/r/{code}` | 301/302 với `Location`, hoặc 404 |
-| GET | `/api/v1/demo/stats` | 200 bộ đếm khi bật demo, 404 khi tắt |
-| POST | `/api/v1/demo/cache/clear` | Xóa cache, trả stats hiện tại |
-| POST | `/api/v1/demo/stats/reset` | Reset bộ đếm, trả stats hiện tại |
+| GET | /api/v1/health | 200 khi truy cập được bảng SQLite |
+| POST | /api/v1/links | 201 tạo mới, 200 tái sử dụng |
+| GET | /api/v1/links/{code} | 200 metadata hoặc 404 |
+| GET | /r/{code} | 301/302 + Location, X-Cache; hoặc 404 |
+| GET | /api/v1/demo/stats | Stats khi bật demo; 404 khi tắt |
+| POST | /api/v1/demo/cache/clear | Xóa cache, giữ DB/counters |
+| POST | /api/v1/demo/stats/reset | Reset counters, giữ DB/cache |
+| GET | /demo/target | Trang đích để thử chuyển hướng khi không có Internet |
 
-## Tạo hoặc dùng lại liên kết
+## Tạo liên kết
 
-```http
-POST /api/v1/links
-Content-Type: application/json
+~~~json
+{
+  "long_url": "https://example.com/article?chapter=8#section",
+  "redirect_status": 302
+}
+~~~
 
-{"long_url":"https://example.com/article?chapter=8#section","redirect_status":302}
-```
+Mode có thể bỏ qua, mặc định 302. Chỉ nhận JSON integer 301/302, không tự đổi chuỗi "301", bool hoặc số thập phân. URL được trim hai đầu, tối đa 4096 ký tự, HTTP/HTTPS tuyệt đối, không có khoảng trắng bên trong, backslash hay ký tự điều khiển. Không tải hoặc xác minh nội dung trang đích. URL không được tự bỏ query/fragment hoặc sắp xếp lại query. Trường thừa và JSON sai trả 422.
 
-`redirect_status` có thể bỏ qua (302). Chỉ nhận số 301 hoặc 302. `long_url` là chuỗi HTTP/HTTPS tuyệt đối, 1–4096 ký tự sau khi trim; không nhận khoảng trắng bên trong, dấu backslash hoặc ký tự điều khiển. Không tự truy cập trang đích nên URL có cấu trúc hợp lệ vẫn có thể trỏ tới trang không hoạt động. Thuộc tính request không xác định trả 422.
-
-Response minh họa (ID, mã và thời gian thực tế phụ thuộc DB):
-
-```json
+~~~json
 {
   "id": 1,
   "short_code": "1",
   "short_url": "http://127.0.0.1:8000/r/1",
   "long_url": "https://example.com/article?chapter=8#section",
   "redirect_status": 302,
-  "created_at": "2026-11-12T00:00:00Z",
+  "created_at": "2026-11-17T00:00:00Z",
   "reused": false
 }
-```
+~~~
 
-Gửi lại cùng chuỗi URL sau trim và cùng chế độ trả 200, cùng ID/mã/thời gian, `reused=true`. Không chuẩn hóa URL để gộp `https://example.com` với `https://example.com/`, không đổi thứ tự query hoặc xóa fragment. Thay đổi chế độ tạo một bản ghi khác. ID SQLite được mã hóa Base62 theo `0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`.
+Ví dụ minh họa; ID và thời gian thực tế phụ thuộc DB. Cùng chuỗi URL sau trim + cùng mode dùng lại một bản ghi, trả 200/reused=true. Khác mode tạo hai mã riêng. Metadata trả cùng cấu trúc với reused=true để biểu thị bản ghi đã có, không đi qua cache redirect hoặc tăng counters.
 
-## Metadata và redirect
+## Redirect
 
-Metadata có cùng các trường response trên, `reused=true` biểu thị bản ghi đã có. Không dùng cache chuyển hướng và không tăng bộ đếm. Mã được tra cứu đúng hoa/thường.
+GET /r/1 trả status rõ ràng 301 hoặc 302 và Location. URL ASCII/percent-encoded được giữ; ký tự Unicode được URI.toASCIIString() chuyển thành dạng truyền được qua header. Mã phân biệt hoa/thường.
 
-```http
-HTTP/1.1 302 Found
-Location: https://example.com/article?chapter=8#section
-X-Cache: MISS
-Cache-Control: no-store
-```
+- 302: Cache-Control: no-store.
+- 301: Cache-Control: private, max-age=300.
+- X-Cache: MISS hoặc HIT phản ánh cache RAM của server.
+- Mã thiếu: 404, X-Cache: MISS và no-store; không lưu cache âm.
 
-Lần tiếp theo khi ánh xạ còn trong RAM: `X-Cache: HIT`. Liên kết 301 dùng `Cache-Control: private, max-age=300`. Mỗi GET redirect server nhận sẽ được đếm; HEAD chưa được cung cấp (405). 404 redirect cũng có `X-Cache: MISS` và `Cache-Control: no-store`; không cache âm.
+Một phản hồi HTTP được trình duyệt dùng lại có thể không quay lại server. Không nói 301 luôn cache hoặc 302 không bao giờ cache; xét cả header. Stats chỉ đếm request GET redirect server nhận được.
 
-## Stats trong demo
+## Stats
 
-```json
+~~~json
 {
   "redirect_requests": 2,
   "cache_hits": 1,
@@ -64,16 +61,12 @@ Lần tiếp theo khi ánh xạ còn trong RAM: `X-Cache: HIT`. Liên kết 301 
   "cache_size": 1,
   "hit_rate": 0.5
 }
-```
+~~~
 
-`db_lookup_count` chỉ tính truy vấn phục vụ redirect. `hit_rate = hits / (hits + misses)`, hoặc 0 khi chưa có truy vấn. `cache_size` chỉ tính mục chưa hết hạn. TTL không gia hạn khi hit; chạm một mục sẽ đưa nó tới cuối hàng LRU. Đọc stats không tăng bộ đếm. Clear cache không xóa SQLite hoặc reset bộ đếm; reset bộ đếm không xóa cache. Các endpoint demo trả 404 khi `DEMO_MODE=false` và chỉ dùng cục bộ, không có xác thực quản trị.
+TTL tính từ khi nạp; HIT chỉ cập nhật thứ tự LRU. Stats dọn các mục hết hạn nhưng không tăng bộ đếm. Clear và reset là hai thao tác độc lập. Tạo lại process làm RAM/counters bắt đầu lại; SQLite được giữ.
 
 ## Lỗi
 
-| Mã | Response minh họa | Cách xử lý |
-| --- | --- | --- |
-| 422 | `{"detail":"Dữ liệu chưa hợp lệ. Hãy nhập URL HTTP/HTTPS tối đa 4096 ký tự và chế độ 301 hoặc 302."}` | Sửa dữ liệu |
-| 404 | `{"detail":"Liên kết không tồn tại"}` | Kiểm tra mã ngắn |
-| 503 | `{"detail":"Máy chủ đang bận. Bạn hãy thử lại."}` | Thử lại sau |
+422: dữ liệu không hợp lệ. 404: mã không tồn tại hoặc API demo bị tắt. 503: lỗi SQLite. 500: lỗi server chưa dự kiến. Response lỗi dạng **{"detail":"Thông báo tiếng Việt"}**; chi tiết nội bộ chỉ ghi log.
 
-Stack trace và đường dẫn DB không được trả cho người dùng. Chi tiết lỗi SQLite ghi vào log server. Nếu chưa build frontend, GET `/` trả 503 với hướng dẫn build; API vẫn hoạt động.
+API demo dùng cho môi trường cục bộ, không phải hệ thống xác thực quản trị. Không có API sửa/xóa liên kết. Dùng một tiến trình server để stats/cache có ý nghĩa nhất quán.

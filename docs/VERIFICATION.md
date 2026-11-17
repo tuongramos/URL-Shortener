@@ -1,62 +1,72 @@
-# Kết quả triển khai và nghiệm thu
+# Nghiệm thu bản Android / Kotlin
 
-Ngày kiểm tra: **12/11/2026**, giờ Việt Nam. Phạm vi: bản đầu trong tài liệu quy trình gốc; triển khai cục bộ, một tiến trình FastAPI.
+Ngày kiểm tra: **17/11/2026**, giờ Việt Nam. Bản chạy hiện tại là Android native Kotlin/Jetpack Compose và backend Kotlin/Ktor. Kết quả này thay cho nghiệm thu Python/TypeScript trước khi chuyển đổi.
 
-## Đã triển khai
+## Build và kiểm thử tự động
 
-- [x] Backend Python/FastAPI, health endpoint và OpenAPI `/docs`.
-- [x] SQLite cấp ID và lưu URL/mã/chế độ/thời gian UTC trong transaction; đường dẫn cố định theo dự án, WAL và timeout khi bận.
-- [x] Base62 đúng bảng ký tự và toàn bộ ví dụ trong quy trình, không cắt mã, tra cứu phân biệt hoa/thường.
-- [x] HTTP/HTTPS, trim hai đầu, giới hạn 4096 ký tự, giữ path/query/fragment; server không tải trang đích.
-- [x] Tạo mới 201, tái sử dụng 200, ràng buộc cặp URL/chế độ; yêu cầu trùng đồng thời chỉ tạo một bản ghi.
-- [x] Redirect thật 301/302, `Location`, `Cache-Control` và `X-Cache`; 404 khi không có mã.
-- [x] Cache RAM có TTL, giới hạn LRU, khóa đồng bộ và bộ đếm demo.
-- [x] Metadata không thay đổi thống kê redirect; clear cache/reset counters độc lập; demo tắt thì trả 404.
-- [x] Giao diện TypeScript thuần bằng tiếng Việt: nhập URL, pending, kết quả, sao chép/mở, thông báo lỗi và sao chép tay.
-- [x] Vite proxy trong phát triển; FastAPI phục vụ frontend đã build và tài nguyên tĩnh.
-- [x] Requirements chốt phiên bản, npm lockfile, `.env.example`, `.gitignore`, README, API, DEMO và script PowerShell.
-- [x] Trang đích ngoại tuyến độc lập và script kiểm chứng HTTP thật.
+| Nhóm | Kết quả |
+| --- | --- |
+| Shared URL validator | 4/4 đạt |
+| Backend Base62/cache/SQLite/cấu hình | 10/10 đạt |
+| Backend API Ktor | 9/9 đạt |
+| Android ViewModel/state/repository contract | 10/10 đạt |
+| Compose instrumented trên Medium_Phone, Android 15/API 35 | 5/5 đạt |
+| Tổng | **38/38 đạt** |
+| APK debug | **Build thành công**, app/build/outputs/apk/debug/app-debug.apk |
+| Script setup.ps1 | Chạy build APK, server installDist và test JVM thành công |
+| Script start.ps1 | Khởi động server Ktor cục bộ thành công |
+| Script run-android.ps1 | adb reverse, cài APK và mở MainActivity thành công |
+| PowerShell parser | Cả bốn script hiện tại hợp lệ cú pháp |
 
-## Kiểm thử tự động
+Đã kiểm tra thêm bằng Windows PowerShell 5.1: script trước dùng chuỗi tiếng Việt UTF-8 không BOM gây đọc sai ký tự và lỗi parser. Thông báo trong script đã chuyển sang ASCII không dấu; cả bốn script parse được trên PowerShell 5.1 và 7. Chạy `run-android.ps1` bằng PowerShell 5.1 đã build thành công, cài APK và mở MainActivity trên emulator. Script chờ Android khởi động hoàn tất tối đa 120 giây trước khi cài APK. Giao diện Android vẫn giữ tiếng Việt có dấu.
 
-| Nhóm | Kết quả | Nội dung chính |
-| --- | --- | --- |
-| Pytest backend | **58/58 đạt** | Base62, dữ liệu đầu vào, đồng thời, HTTP, cache, cấu hình và lưu trữ |
-| Vitest frontend | **12/12 đạt** | Gửi/sửa lỗi, gửi lặp, URL dài, nội dung HTML an toàn, tái sử dụng, clipboard, mất kết nối, 422/500 và timeout |
-| TypeScript + Vite build | **Đạt** | Sinh HTML/CSS/JS, không có lỗi TypeScript |
-| `pip check` | **Đạt** | Không có xung đột phụ thuộc Python |
-| Script PowerShell | **Đạt** | Parse cú pháp và chạy thực tế setup/start |
+Gradle 9.4.1, AGP 9.2.1, Kotlin 2.4.21, Compose BOM 2026.09.00, Ktor 3.6.1; compile SDK 37, target SDK 35, min SDK 26. JDK chạy build/server trên máy hiện tại là JDK 25 đi kèm Android Studio. Gradle Wrapper có checksum SHA-256.
 
-Frontend dùng happy-dom để kiểm tra hành vi và trạng thái; bộ kiểm thử này không đo bố cục hiển thị. Pytest có một cảnh báo từ Starlette rằng hỗ trợ `httpx` trong TestClient sẽ bị loại bỏ về sau; các phiên bản đã chốt vẫn chạy thành công. Chưa thay sang `httpx2` trong bản này.
+## Kiểm tra chức năng Kotlin
 
-## Tích hợp HTTP và lưu trữ
+- Đúng ví dụ Base62 trong sách và biên 62^7.
+- Cùng URL/mode dùng lại, khác 301/302 có mã riêng.
+- URL HTTP/HTTPS và giới hạn 4096; giữ query/fragment/percent encoding.
+- JSON sai kiểu, mode string/float/bool, trường thừa và dữ liệu lỗi bị từ chối.
+- SQLite transaction IMMEDIATE và UNIQUE; nhiều yêu cầu trùng chỉ tạo một bản ghi.
+- Mã a và A phân biệt.
+- TTL hết hạn, LRU, clear/reset độc lập, không cache âm.
+- Bộ đếm đúng khi truy cập đồng thời; metadata/stats không tăng redirect.
+- Demo tắt trả 404; nghiệp vụ tạo vẫn hoạt động.
+- ViewModel chống gửi lặp, giữ input khi lỗi, cho retry, phục hồi input/result và lưu cấu hình server.
+- UI Compose có form, nút disabled khi loading, kết quả, callback copy/open và sao chép tay; không tự mở URL ngắn khi vừa tạo.
 
-- [x] Trang chính và các tệp CSS/JS đã build trả 200 qua FastAPI.
-- [x] Trang Vite trả 200; POST qua proxy `/api/v1/links` hoạt động, URL ngắn dùng cổng backend 8000.
-- [x] Chạy `scripts/demo_check.py --follow`: xác nhận tạo/tái sử dụng, 301/302, `Location`, MISS → HIT, metadata không tăng bộ đếm và lỗi 404/422.
-- [x] Hai lần redirect 302 sau clear/reset: `redirect_requests=2`, `cache_hits=1`, `cache_misses=1`, `db_lookup_count=1`, `cache_size=1`, `hit_rate=0.5`.
-- [x] Theo chuyển hướng đến trang offline cổng 9000, nhận 200 và nội dung “Chuyển hướng thành công”.
-- [x] Khởi động lại tiến trình server thật: liên kết cũ còn trong DB; trước lượt truy cập mới, cache và bộ đếm bằng 0; redirect cũ trả 302/MISS.
-- [x] Sau khởi động lại, server phục vụ bản cuối cùng và từ chối chế độ dạng số thập phân với 422.
+## HTTP thật và dữ liệu trước chuyển đổi
 
-## Kiểm tra trên Chrome của người dùng
+Task Kotlin **:server:demoCheck** đã chạy thành công trên server thật:
 
-- [x] Mở giao diện đã build, nhập URL và bấm Rút gọn.
-- [x] Quan sát trạng thái “Đang rút gọn...” và nút bị vô hiệu hóa trong lúc gửi.
-- [x] Quan sát liên kết đã có được tái sử dụng.
-- [x] Bấm Sao chép, nhận thông báo “Đã sao chép liên kết”.
-- [x] Bấm Mở liên kết, đến trang đích thật; query và fragment còn nguyên trên thanh địa chỉ.
-- [x] Nhập scheme FTP rồi nhấn Enter; hiện lỗi cạnh ô nhập, giữ nội dung để sửa.
-- [x] Quan sát bố cục hẹp ở cửa sổ khoảng 580px và màn hình rộng 1920px.
+1. Tạo/dùng lại URL 302.
+2. Clear/reset, nhận MISS rồi HIT.
+3. Nhận đúng hai request, một hit, một miss và một DB lookup; hit rate 0.5.
+4. Metadata không làm tăng bộ đếm.
+5. Tạo 301 riêng, kiểm tra 404/422.
+6. Theo URL ngắn thật tới /demo/target, nhận 200 và nội dung “Chuyển hướng thành công”.
 
-Chưa kiểm tra trên điện thoại thật hoặc thiết bị/mạng khác. Tình huống clipboard bị chặn, mất kết nối và timeout đã được kiểm chứng bằng kiểm thử frontend; chưa ép các điều kiện đó trực tiếp trong Chrome. Không thay đổi quyền bảo mật của trình duyệt để thử clipboard.
+Đã khởi động lại tiến trình Ktor thật: RAM/counters bắt đầu 0, đọc được bản ghi ID 1 từ dữ liệu cũ. URL tạo trực tiếp trong app Android còn tồn tại, redirect đầu sau restart trả 302/MISS/Location đúng; theo chuyển hướng tới trang đích cục bộ thành công.
 
-## Cài đặt từ môi trường sạch
+SQLite cũ được giữ tại backend/data/shortener.db theo .env hiện hữu; bản cài mới mặc định dùng server/data/shortener.db. Không cần Python để đọc DB cũ.
 
-Đã sao chép source vào thư mục kiểm tra riêng, không dùng lại `.venv`, `node_modules`, `dist` hoặc DB thật; chạy `scripts/setup.ps1` để tạo Python venv mới, cài requirements và `npm ci` từ lockfile. Build, 58 kiểm thử backend và 12 kiểm thử frontend đều đạt. Đã chạy `start.ps1 -Port 8001` từ thư mục khác với origin cấu hình tương ứng: trang chính/health hoạt động, tạo URL ngắn đúng cổng và DB nằm ở gốc bản sao. Thư mục kiểm tra được dọn sau khi hoàn tất.
+## Quan sát trên emulator
 
-Phiên bản đã kiểm thử: Python 3.12.14, SQLite 3.53.1, Node.js 24.14.0, npm 11.13.0. Môi trường Python ban đầu dùng runtime đi kèm Codex; README có hướng dẫn tạo lại bằng Python hệ thống.
+Đã quan sát trực tiếp giao diện dọc: giữ nền xanh nhạt, logo, tiêu đề, thẻ trắng và nút xanh đậm theo thiết kế cũ. Nhập URL đích cục bộ trong app, tạo URL ngắn bằng repository HTTP thật, hiện URL gốc và kết quả; bấm Sao chép nhận “Đã sao chép liên kết”.
 
-## Ngoài phạm vi bản đầu
+Bấm Mở liên kết đã gọi Chrome Android qua ACTION_VIEW. Chrome của AVD dừng ở màn hình thiết lập lần đầu có phần tài khoản/điều khoản; chưa hoàn tất thiết lập đó thay người dùng, nên **chưa ghi nhận trang đích hiển thị trực tiếp trong Chrome Android**. HTTP theo redirect đến trang đích đã được kiểm chứng riêng bằng client thật. Trước buổi báo cáo, người dùng tự hoàn tất thiết lập trình duyệt nếu được hỏi.
 
-Chưa triển khai tên miền/HTTPS công khai, rate limiting, tài khoản, QR, dashboard, Redis hoặc nhiều worker. Muốn chia sẻ URL cho máy khác cần cấu hình địa chỉ truy cập được; `127.0.0.1` hiện chỉ dùng trên máy chạy server. Các bước mở dịch vụ công khai được ghi trong README.
+Sau khi quan sát, đã hoàn thiện việc bỏ focus/ẩn bàn phím khi gửi và build lại; cả năm kiểm thử Compose được chạy lại thành công trên APK cuối.
+
+## Phạm vi và giới hạn
+
+- Đã xóa nguồn web/Python và các bản lưu legacy theo yêu cầu; app/server/shared hiện là Kotlin.
+- Tài liệu quy trình gốc còn trong dự án để tham khảo lịch sử, không phải lệnh chạy hiện tại.
+- Không dùng WebView hoặc nhúng server Python trong Android.
+- Chưa triển khai Internet; chỉ localhost/USB/emulator hoặc LAN khi cấu hình.
+- Chưa kiểm tra điện thoại vật lý, mạng Wi-Fi khác hoặc bản release HTTPS.
+- Chưa có load balancer, ID phân tán, analytics, rate limiting hoặc cache dùng chung nhiều process.
+- Emulator có thể cần tự hoàn tất thiết lập Chrome lần đầu; không tự đăng nhập hay thay quyền bảo mật của trình duyệt.
+
+Xem [README](../README.md), [DEMO](DEMO.md), [API](API.md) và [giải thích code Kotlin](GIAI_THICH_CODE.md).
