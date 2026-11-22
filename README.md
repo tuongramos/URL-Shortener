@@ -1,140 +1,193 @@
 # Liên kết — URL Shortener Android / Kotlin
 
-Ứng dụng Android native bằng **Kotlin + Jetpack Compose**, backend **Kotlin + Ktor**, lưu trữ SQLite. Các model và kiểm tra URL được dùng chung bằng Kotlin. Không dùng WebView, Python, TypeScript hoặc Node.js để chạy bản hiện tại.
+Ứng dụng Android rút gọn URL, viết bằng Kotlin và Jetpack Compose. Server đi kèm dùng Kotlin/Ktor và SQLite. Dự án gồm ba module: `app`, `server`, `shared`.
 
-Giao diện giữ nền xanh nhạt, thẻ trắng, nút xanh đậm, nội dung tiếng Việt và luồng thao tác của thiết kế đã chốt; bố cục được chuyển sang màn hình điện thoại. Mã web/Python cũ đã được bỏ theo yêu cầu. Tài liệu quy trình gốc được giữ làm tài liệu lịch sử; bộ hướng dẫn chạy bên dưới áp dụng cho bản Kotlin.
+## Hướng dẫn dành cho người tải source về chấm bài
 
-## Mở trong Android Studio
+**Bản source có đầy đủ mã nguồn và Gradle Wrapper để import lại. Để sử dụng chức năng rút gọn URL, cần chạy cả server Ktor và app Android. Bấm Run app trong Android Studio không tự khởi động server.**
 
-1. Chọn **File → Open** và mở chính thư mục **D:\Projects\URL Shortener** (nơi có settings.gradle.kts).
-2. Chờ Gradle Sync. Dùng **Gradle JDK là JDK đi kèm Android Studio**, hoặc JDK phù hợp đã cài; không dùng Java 8 cũ trong PATH.
-3. Chọn cấu hình chạy **app**, chọn emulator/điện thoại và bấm Run.
-4. Chạy server ở terminal riêng và nối cổng như bên dưới.
+Các bước dưới đây dành cho Windows và PowerShell. Có thể giải nén dự án ở vị trí bất kỳ trên máy; không cần giữ đường dẫn của máy tác giả.
 
-Dự án gồm ba module: **app** (Android/Compose), **server** (Ktor/JVM), **shared** (model JSON và URL validator). Android Studio Preview có sẵn trạng thái ban đầu và kết quả trong ShortenerScreen.kt.
+### 1. Chuẩn bị môi trường
 
-## Chạy demo cục bộ trên máy hiện tại
+- Android Studio tương thích Android Gradle Plugin **9.2.1**.
+- **JDK 25** cho Gradle theo cấu hình `gradle/gradle-daemon-jvm.properties`. Java/Kotlin của dự án tạo bytecode JVM 17.
+- Trong SDK Manager, cài **Android SDK Platform 37**, Android SDK Platform-Tools và các Build Tools mà Gradle yêu cầu.
+- Một emulator hoặc điện thoại Android **8.0 / API 26 trở lên**. Khi dùng điện thoại thật, bật USB debugging và chấp nhận kết nối ADB trên điện thoại.
+- Kết nối Internet trong lần đầu để tải Gradle, JDK nếu cần, SDK và thư viện. Không cần cài Python, Node.js, MySQL hoặc một server cơ sở dữ liệu riêng.
 
-Terminal PowerShell thứ nhất, tại gốc dự án:
+### 2. Giải nén và mở trong Android Studio
 
-~~~powershell
-.\scripts\start.ps1
-~~~
+1. Giải nén toàn bộ file ZIP.
+2. Trong Android Studio, chọn **File → Open**.
+3. Chọn thư mục `URL Shortener` có chứa `settings.gradle.kts`, `gradlew.bat`, `app`, `server`, `shared`. Không chỉ mở riêng thư mục `app`.
+4. Chờ Gradle Sync hoàn tất và cài các SDK được yêu cầu nếu có.
+5. Trong phần cài đặt Gradle của Android Studio, dùng JDK phù hợp cấu hình trên. Nếu JDK đi kèm Android Studio là JDK 25 thì có thể dùng JDK đó.
 
-Lệnh này hiện chạy **Ktor**, không chạy FastAPI. Giữ terminal mở. Mặc định server tại http://127.0.0.1:8000, tài liệu API tại http://127.0.0.1:8000/docs.
+### 3. Cài đặt và build lần đầu
 
-Mở AVD có sẵn trong **Device Manager** của Android Studio. Terminal thứ hai:
+Mở **Terminal** trong Android Studio, dùng PowerShell và đặt thư mục làm việc tại gốc dự án, nơi có `gradlew.bat`.
 
-~~~powershell
-.\scripts\run-android.ps1
-~~~
-
-Nếu có nhiều thiết bị:
-
-~~~powershell
-.\scripts\run-android.ps1 -Serial emulator-5554
-~~~
-
-Script build APK, thực hiện **adb reverse tcp:8000 tcp:8000**, cài app và mở app. Nhờ ánh xạ cổng này, app và trình duyệt trên emulator/điện thoại USB có thể dùng cùng URL http://127.0.0.1:8000 như máy tính. Đây là cách demo không cần Internet, IP LAN hoặc thay đổi firewall. Nếu rút USB/khởi động lại emulator, chạy lại bước nối cổng.
-
-URL đích ngoại tuyến để dán vào app:
-
-~~~text
-http://127.0.0.1:8000/demo/target?chapter=8#chapter-8
-~~~
-
-Rút gọn → Sao chép toàn bộ URL ngắn → Mở liên kết hoặc dán vào trình duyệt. Server phải đang chạy. Mã đơn lẻ như “a” chưa phải một URL đầy đủ.
-
-## Cài và build từ đầu
-
-Cần Android Studio, Android SDK Platform 37, Build Tools 36.0.0, Platform-Tools và JDK 17+ tương thích Gradle 9.4.1. Máy hiện tại dùng JDK 25 đi kèm Android Studio. Gradle Wrapper đã kèm mã kiểm tra SHA-256 của bản phân phối.
-
-~~~powershell
+```powershell
 .\scripts\setup.ps1
-~~~
+```
 
-Lệnh cài/build chạy ba module Kotlin và các kiểm thử JVM. Không cài Python hoặc Node.js. Lần đầu cần mạng để tải Gradle/Maven; sau khi tải phụ thuộc, luồng demo với trang đích cục bộ không cần Internet.
+Script sẽ tạo `.env` từ `.env.example` nếu chưa có, build APK, build server và chạy các kiểm thử JVM. Không ghi đè `.env` đã tồn tại. Lần đầu có thể mất thời gian vì phải tải thư viện.
 
-Nếu cần chỉ build:
+Các script tự tìm JDK đi kèm Android Studio ở vị trí cài mặc định nếu `JAVA_HOME` chưa được đặt. Nếu đang có `JAVA_HOME` trỏ tới Java cũ, hoặc cài Android Studio/SDK ở vị trí khác, cần đặt `JAVA_HOME` và `ANDROID_HOME` đúng trên máy đang chạy. Thiết lập JDK trong Android Studio và `JAVA_HOME` của Terminal có thể khác nhau.
 
-~~~powershell
-.\scripts\setup.ps1 -SkipTests
-~~~
+### 4. Khởi động server
 
-APK debug ở **app/build/outputs/apk/debug/app-debug.apk**. Có thể cài APK này trên thiết bị Android 8.0/API 26 trở lên. Bản debug cho phép HTTP để nối server cục bộ; bản release mặc định không cho HTTP rõ văn bản và cần cấu hình HTTPS phù hợp trước khi dùng như bản phát hành.
+Trong Terminal thứ nhất, tại gốc dự án:
 
-Nếu PowerShell chặn script, có thể dùng terminal Android Studio và Gradle trực tiếp sau khi đặt JAVA_HOME:
+```powershell
+.\scripts\start.ps1
+```
 
-~~~powershell
-$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+Giữ Terminal này mở trong suốt lúc sử dụng app. Server mặc định chạy tại `http://127.0.0.1:8000`.
+
+Mở trình duyệt trên máy tính vào `http://127.0.0.1:8000/docs` để kiểm tra server đã hoạt động.
+
+### 5. Chạy ứng dụng Android
+
+Khởi động một emulator từ **Device Manager** và chờ đến màn hình chính. Có thể thay emulator bằng điện thoại USB đã được ADB nhận diện.
+
+Mở Terminal thứ hai ở gốc dự án rồi chạy:
+
+```powershell
+.\scripts\run-android.ps1
+```
+
+Script sẽ build APK, chạy `adb reverse tcp:8000 tcp:8000`, cài APK và mở ứng dụng. Nhờ ánh xạ cổng này, app truy cập được server đang chạy trên máy tính qua địa chỉ mặc định `http://127.0.0.1:8000`.
+
+Nếu có nhiều thiết bị, chỉ định đúng serial của thiết bị:
+
+```powershell
+.\scripts\run-android.ps1 -Serial emulator-5554
+```
+
+Nếu muốn dùng nút **Run** của Android Studio: sau khi server đã chạy và đã thiết lập `adb reverse` cho thiết bị, chọn cấu hình `app`, chọn thiết bị rồi bấm Run. Cần thiết lập lại ánh xạ cổng sau khi khởi động lại emulator hoặc ngắt kết nối USB; chạy lại `run-android.ps1` là cách thực hiện nhanh.
+
+### 6. Kiểm tra chức năng
+
+1. Giữ server chạy và mở app.
+2. Dán URL mẫu bên dưới vào ô nhập:
+
+   ```text
+   http://127.0.0.1:8000/demo/target?chapter=8#chapter-8
+   ```
+
+3. Bấm rút gọn để nhận URL ngắn.
+4. Sao chép toàn bộ URL ngắn, rồi mở bằng nút mở liên kết hoặc dán vào trình duyệt.
+5. Trang đích demo hiển thị thông báo chuyển hướng thành công.
+
+Trang đích demo được server phục vụ ngay trên máy tính nên không cần Internet sau khi đã build và tải đủ phụ thuộc. Nếu trình duyệt trên emulator hỏi thiết lập lần đầu, hoàn tất thiết lập trước khi mở liên kết.
+
+## Một số lỗi thường gặp
+
+| Hiện tượng | Cách xử lý |
+| --- | --- |
+| Gradle Sync yêu cầu SDK hoặc JDK | Cài SDK Platform 37 và JDK phù hợp; dự án cấu hình Gradle daemon dùng JDK 25. Kiểm tra kết nối Internet khi tải phụ thuộc. |
+| Terminal báo thiếu JDK hoặc dùng Java quá cũ | Đặt `JAVA_HOME` trỏ đến JDK phù hợp. Cài đặt Gradle JDK trong Android Studio không tự thay `JAVA_HOME` của Terminal. |
+| Không tìm thấy Android SDK / adb | Cài Platform-Tools trong SDK Manager; đặt `ANDROID_HOME` đúng thư mục SDK nếu không dùng vị trí mặc định. |
+| PowerShell không cho chạy file `.ps1` | Dùng các lệnh Gradle trực tiếp trong phần bên dưới, sau khi đặt JDK và SDK đúng. |
+| App hiện giao diện nhưng báo chưa kết nối được máy chủ | Kiểm tra `start.ps1` vẫn đang chạy và mở được `/docs` trên máy tính; chạy lại `run-android.ps1` để thiết lập ánh xạ cổng. |
+| Cổng 8000 đang được sử dụng | Dừng phiên server cũ hoặc ứng dụng đang chiếm cổng trước khi chạy lại. |
+| Có nhiều thiết bị kết nối | Dùng tham số `-Serial` để chọn đúng emulator hoặc điện thoại. |
+
+## Dùng Gradle trực tiếp khi cần
+
+Các lệnh dưới đây chạy bằng PowerShell tại gốc dự án, với `JAVA_HOME` trỏ tới JDK phù hợp và SDK đã được Android Studio nhận diện.
+
+Build APK, server và kiểm thử JVM:
+
+```powershell
+.\gradlew.bat :app:assembleDebug :server:installDist :shared:test :server:test :app:testDebugUnitTest
+```
+
+Tạo cấu hình demo nếu `.env` chưa tồn tại rồi chạy server:
+
+```powershell
+if (-not (Test-Path -LiteralPath .env)) {
+    Copy-Item -LiteralPath .env.example -Destination .env
+}
 .\gradlew.bat :server:run
-# Terminal khác:
-.\gradlew.bat :app:assembleDebug
-~~~
+```
 
-## Kết nối điện thoại qua Wi-Fi LAN nếu cần
+Trong Terminal khác, với một thiết bị đã khởi động và kết nối, dùng ADB trong Android SDK Platform-Tools để ánh xạ cổng trước khi bấm Run app. Nếu SDK ở vị trí mặc định trên Windows:
 
-Mặc định ưu tiên emulator/USB với adb reverse. Nếu không dùng USB:
+```powershell
+$adbPath = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+& $adbPath reverse tcp:8000 tcp:8000
+```
 
-1. Đặt PUBLIC_BASE_URL trong .env thành http://IP-LAN-CUA-MAY-TINH:8000.
-2. Chạy server với .\scripts\start.ps1 -BindAddress 0.0.0.0.
-3. Trong app bấm dấu ba chấm cạnh phần đầu trang, nhập cùng địa chỉ LAN trong **Kết nối máy chủ**.
-4. Máy tính và điện thoại phải truy cập được nhau; kiểm tra cấu hình mạng/firewall của máy theo nhu cầu thực tế.
+Nếu SDK được cài ở nơi khác, sửa `$adbPath` theo đường dẫn thực tế trên máy đang chạy.
 
-Không dùng địa chỉ 10.0.2.2 làm URL chia sẻ chung cho máy tính và điện thoại thật: đó là địa chỉ đặc biệt của emulator. Dự án chưa được đưa lên Internet.
+APK debug sau khi build nằm tại `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Cấu hình server
+## Cấu hình và dữ liệu
 
-Ứng dụng đọc .env ở gốc dự án, biến môi trường được ưu tiên. Không ghi đè .env đã tồn tại.
+`setup.ps1` tạo `.env` từ `.env.example`. Server đọc `.env` ở gốc dự án; biến môi trường được ưu tiên hơn giá trị trong file.
 
-| Biến | Mặc định | Vai trò |
+| Biến | Giá trị trong cấu hình mẫu | Vai trò |
 | --- | --- | --- |
-| PUBLIC_BASE_URL | http://127.0.0.1:8000 | Origin dùng trong URL ngắn, không kèm path/query/fragment |
-| DATABASE_PATH | server/data/shortener.db | Đường dẫn SQLite tương đối theo gốc dự án |
-| CACHE_MAX_ITEMS | 1000 | Dung lượng cache LRU |
-| CACHE_TTL_SECONDS | 300 | TTL từ lúc nạp, HIT không gia hạn |
-| DEMO_MODE | false | Bật API thống kê/clear/reset; .env.example đặt true cho demo |
-| SERVER_HOST | 127.0.0.1 | Địa chỉ server lắng nghe |
-| SERVER_PORT | 8000 | Cổng server |
+| `PUBLIC_BASE_URL` | `http://127.0.0.1:8000` | Origin dùng tạo URL ngắn, không có path/query/fragment |
+| `DATABASE_PATH` | `server/data/shortener.db` | Đường dẫn SQLite tương đối theo gốc dự án |
+| `CACHE_MAX_ITEMS` | `1000` | Số phần tử tối đa của cache LRU |
+| `CACHE_TTL_SECONDS` | `300` | TTL tính từ thời điểm nạp cache |
+| `DEMO_MODE` | `true` | Bật API thống kê/clear/reset để demo cục bộ |
+| `SERVER_HOST` | `127.0.0.1` | Địa chỉ server lắng nghe |
+| `SERVER_PORT` | `8000` | Cổng server |
 
-**Giữ dữ liệu cũ:** .env hiện tại vẫn có thể trỏ tới backend/data/shortener.db. Ktor đọc được đúng schema SQLite của bản trước; không cần Python để sử dụng tệp đó. Khi cài mới, .env.example dùng server/data/shortener.db. Không xóa hoặc đổi DATABASE_PATH nếu muốn tiếp tục dùng các mã đã tạo.
+Không cần mang theo database của máy tác giả. Khi chạy lần đầu, server tự tạo SQLite và bảng dữ liệu mới. Nếu dùng lại thư mục phát triển đã có `.env`, giữ nguyên `DATABASE_PATH` nếu muốn tiếp tục sử dụng các liên kết đã tạo trước đó; một số cấu hình cũ có thể trỏ tới `backend/data/shortener.db`.
 
-BindAddress/Port quyết định nơi server lắng nghe; chúng không tự thay PUBLIC_BASE_URL. Khi đổi cổng, cần đồng bộ origin của server, kết nối app và ánh xạ adb reverse.
+Nếu cần kết nối điện thoại qua Wi-Fi LAN thay cho USB: đặt `PUBLIC_BASE_URL` thành địa chỉ IP LAN của máy tính, chạy `start.ps1 -BindAddress 0.0.0.0`, và nhập cùng địa chỉ đó trong phần **Kết nối máy chủ** của app. Máy tính và điện thoại cần truy cập được nhau. Cách demo mặc định dùng emulator/USB và `adb reverse`.
 
-## Kiểm thử
+## Cấu trúc mã nguồn
 
-~~~powershell
-$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+```text
+app/          Ứng dụng Android, Compose UI, ViewModel, HTTP repository
+server/       Ktor API, SQLite, Base62, cache và kiểm thử server
+shared/       Model JSON, kiểm tra URL dùng chung và kiểm thử
+scripts/      Script PowerShell cài đặt, chạy server và chạy app
+gradle/       Gradle Wrapper và cấu hình JDK của Gradle daemon
+docs/         Tài liệu API, kịch bản demo, giải thích code và nghiệm thu
+```
+
+SQLite cấp ID, sau đó mã hóa Base62 bằng bảng `0-9/a-z/A-Z`. Cùng URL sau trim và cùng chế độ chuyển hướng trả lại liên kết cũ. Cache LRU có TTL phục vụ redirect; metadata không làm tăng bộ đếm redirect. Dự án hiện chạy server một process, chưa triển khai công khai trên Internet.
+
+## Kiểm thử và tài liệu bổ sung
+
+Kiểm thử JVM và build APK:
+
+```powershell
 .\gradlew.bat :shared:test :server:test :app:testDebugUnitTest :app:assembleDebug
+```
 
-# Cần emulator hoặc điện thoại đã kết nối:
+Kiểm thử Compose trên một emulator hoặc điện thoại đã kết nối:
+
+```powershell
 .\gradlew.bat :app:connectedDebugAndroidTest
+```
 
-# Cần server đang chạy, DEMO_MODE=true:
+Kiểm tra HTTP thật khi server demo đang chạy và `DEMO_MODE=true`:
+
+```powershell
 .\gradlew.bat :server:demoCheck
-~~~
+```
 
-Kiểm thử tự động dùng DB tạm và cache riêng. Kịch bản demoCheck gọi HTTP thật, tạo/dùng lại liên kết mẫu và clear/reset cache/counters của server đang chạy; tránh các request khác xen vào khi kiểm tra số đếm.
+Task `demoCheck` thay đổi dữ liệu và reset cache/counters phục vụ demo; nên chạy trên dữ liệu thử nghiệm.
 
-## Cấu trúc và tài liệu
+- [Kịch bản demo](docs/DEMO.md).
+- [Tài liệu API](docs/API.md).
+- [Giải thích code Kotlin](docs/GIAI_THICH_CODE.md).
+- [Đối chiếu nội dung Chapter 8](docs/CHAPTER_8_ALIGNMENT.md).
+- [Kết quả kiểm tra đã ghi nhận](docs/VERIFICATION.md).
 
-~~~text
-app/src/main/kotlin/vn/lienket/app/       Activity, ViewModel, repository và Compose UI
-app/src/test/                            Kiểm thử trạng thái app trên JVM
-app/src/androidTest/                     Kiểm thử Compose trên thiết bị
-server/src/main/kotlin/vn/lienket/server/ Ktor, SQLite, Base62, cache và CLI demo
-server/src/test/                         Kiểm thử backend Kotlin
-shared/src/main/kotlin/vn/lienket/shared/ Model JSON và URL validator
-scripts/                                Script PowerShell chạy/build/cài app
-docs/                                   API, demo, giải thích Kotlin, nghiệm thu
-~~~
+`QUY_TRINH_THUC_HIEN_URL_SHORTENER.md` được giữ làm tài liệu lịch sử. Hướng dẫn chạy phiên bản Android/Kotlin hiện tại nằm trong README này.
 
-- [DEMO.md](docs/DEMO.md): kịch bản báo cáo Chapter 8 trên app Android.
-- [API.md](docs/API.md): request, response và lỗi của server Ktor.
-- [GIAI_THICH_CODE.md](docs/GIAI_THICH_CODE.md): giải thích các hàm Kotlin.
-- [CHAPTER_8_ALIGNMENT.md](docs/CHAPTER_8_ALIGNMENT.md): đối chiếu nội dung chương sách.
-- [VERIFICATION.md](docs/VERIFICATION.md): kết quả build/kiểm thử và giới hạn đã xác minh.
+## Nội dung bản ZIP nộp source
 
-SQLite cấp ID, Base62 dùng bảng 0-9/a-z/A-Z và không cắt mã. Cùng URL sau trim + cùng chế độ trả lại liên kết cũ. Cache chỉ nạp trong redirect, metadata không tăng counters. Clear cache không xóa DB/reset counters; reset counters không xóa cache. Bản đầu chạy một process, chưa có ID phân tán, load balancer, analytics hoặc rate limiting.
+Bản ZIP giữ mã nguồn, tài nguyên Android, kiểm thử, cấu hình Gradle, Gradle Wrapper, `.env.example`, script và tài liệu. Các thư mục build/cache, bộ công cụ tải về, môi trường Python cũ, lịch sử `.git`, database chạy thử, `.env` riêng và `local.properties` của máy tác giả không được đóng gói.
 
-Nguồn cấu hình: [Android Compose](https://developer.android.com/develop/ui/compose/setup-compose-dependencies-and-compiler), [AGP 9.2](https://developer.android.com/build/releases/agp-9-2-0-release-notes), [Ktor](https://ktor.io/docs/server-create-a-new-project.html).
+Android Studio/Gradle sẽ tải các phụ thuộc và tạo lại file build khi mở trên máy khác. Việc này giúp bản source nhỏ hơn giới hạn 100 MB; bản ZIP không phải một gói chạy ngoại tuyến có sẵn toàn bộ SDK và thư viện.

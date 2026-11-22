@@ -44,20 +44,27 @@ class HttpShortenerRepository : ShortenerRepository, Closeable {
 
     override suspend fun create(serverUrl: String, longUrl: String): ShortLink {
         try {
+            // Gửi yêu cầu tạo link đến API của server.
             val response = client.post("${ServerAddress.normalize(serverUrl)}/api/v1/links") {
+                // Dữ liệu gửi đi có dạng JSON.
                 contentType(ContentType.Application.Json)
+                // Gửi URL gốc; mặc định dùng chuyển hướng 302.
                 setBody(CreateLinkRequest(longUrl))
             }
+            // 200: dùng lại link cũ; 201: tạo link mới. Mã khác là lỗi.
             if (response.status.value !in setOf(200, 201)) {
                 if (response.status.value == 422) throw ApiException(422, "Liên kết chưa hợp lệ. Hãy kiểm tra địa chỉ HTTP/HTTPS và thử lại.")
                 throw ApiException(response.status.value, "Máy chủ chưa xử lý được yêu cầu. Bạn hãy thử lại.")
             }
+            // Đọc JSON thành ShortLink để trả cho ViewModel.
             return response.body<ShortLink>().also {
+                // Kiểm tra URL ngắn và kiểu chuyển hướng server trả về.
                 UrlValidator.validate(it.shortUrl)
                 require(it.redirectStatus in setOf(301, 302))
             }
         } catch (error: CancellationException) { throw error }
         catch (error: ApiException) { throw error }
+        // Đổi các lỗi còn lại thành thông báo cho người dùng.
         catch (_: Exception) { throw ApiException(0, "Chưa kết nối được máy chủ. Bạn hãy thử lại.") }
     }
 

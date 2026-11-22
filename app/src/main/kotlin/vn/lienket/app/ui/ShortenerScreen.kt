@@ -78,7 +78,9 @@ fun ShortenerScreen(
                         Text("Dán liên kết của bạn", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(12.dp))
                         OutlinedTextField(
+                            // Hiển thị URL đang nhập.
                             value = state.input,
+                            // Khi gõ hoặc dán URL, gọi updateInput() trong ViewModel.
                             onValueChange = onInputChange,
                             modifier = Modifier.fillMaxWidth().testTag("url_input").focusRequester(inputFocus),
                             placeholder = { Text("https://example.com/lien-ket-cua-ban", fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -89,10 +91,12 @@ fun ShortenerScreen(
                             shape = RoundedCornerShape(10.dp),
                             textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, color = Ink),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go, autoCorrectEnabled = false),
+                            // Nhấn Go trên bàn phím cũng gửi yêu cầu rút gọn.
                             keyboardActions = KeyboardActions(onGo = { focus.clearFocus(); onShorten(); keyboard?.hide() }),
                             colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color(0xFFFAFBF8), focusedContainerColor = Color(0xFFFAFBF8), unfocusedBorderColor = Color(0xFFD6DFD1), focusedBorderColor = Olive),
                         )
                         Spacer(Modifier.height(12.dp))
+                        // Bấm nút để gọi shorten(); khóa nút trong lúc chờ kết quả.
                         Button(onClick = { focus.clearFocus(); onShorten(); keyboard?.hide() }, enabled = !state.isLoading,
                             modifier = Modifier.fillMaxWidth().height(54.dp).testTag("shorten_button"), shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Forest, disabledContainerColor = Forest.copy(alpha = 0.65f), disabledContentColor = Color.White)) {
@@ -107,6 +111,7 @@ fun ShortenerScreen(
                             Spacer(Modifier.height(10.dp))
                             Text(it, modifier = Modifier.testTag("url_error").semantics { liveRegion = LiveRegionMode.Assertive }, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, lineHeight = 18.sp)
                         }
+                        // Có kết quả từ server thì hiện phần liên kết ngắn.
                         AnimatedVisibility(state.result != null) {
                             state.result?.let { link -> ResultContent(link, state.copied, state.manualCopy, onCopy, onOpen) }
                         }
@@ -169,6 +174,7 @@ private fun ResultContent(link: ShortLink, copied: Boolean, manualCopy: Boolean,
             Text("Liên kết đã sẵn sàng", color = Color(0xFF5B7550), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(14.dp))
+        // Hiển thị URL ngắn server trả về, ví dụ http://127.0.0.1:8000/r/f.
         Text(link.shortUrl, modifier = Modifier.fillMaxWidth().testTag("short_link").clickable(onClick = onOpen).padding(vertical = 4.dp), color = Forest, fontSize = 22.sp, lineHeight = 29.sp, letterSpacing = (-0.5).sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

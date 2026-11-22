@@ -16,6 +16,7 @@ test-results/
 .idea/
 local.properties
 **/build/
+**/bin/
 *.iml
 server/data/*
 !server/data/.gitkeep

@@ -32,7 +32,9 @@ class MainActivity : ComponentActivity() {
                             persistServerUrl = { preferences.edit().putString("serverUrl", it).apply() })
                     }
                 })
+                // Theo dõi trạng thái để giao diện cập nhật khi có kết quả.
                 val state by model.state.collectAsStateWithLifecycle()
+                // Nối ô nhập với updateInput(), nút Rút gọn với shorten().
                 ShortenerScreen(state, model::updateInput, model::shorten,
                     onCopy = {
                         state.result?.let { result ->

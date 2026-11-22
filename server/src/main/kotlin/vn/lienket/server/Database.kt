@@ -41,37 +41,50 @@ class Database(private val path: Path) {
         }
     }
 
+    // Mở kết nối; use tự đóng kết nối khi xử lý xong.
     fun createOrGet(longUrl: String, redirectStatus: Int): Creation = connect().use { connection ->
         connection.autoCommit = false // SQLiteConfig mở transaction IMMEDIATE trước SELECT.
         try {
+            // Tìm link có cùng URL gốc và kiểu chuyển hướng.
             val existing = connection.prepareStatement("SELECT * FROM links WHERE long_url = ? AND redirect_status = ?").use { query ->
+                // Gán dữ liệu vào hai dấu ? trong câu SQL.
                 query.setString(1, longUrl)
                 query.setInt(2, redirectStatus)
+                // Có bản ghi thì đọc thành Link, không có thì nhận null.
                 query.executeQuery().use { result -> if (result.next()) result.toLink() else null }
             }
             if (existing != null) {
                 connection.commit()
+                // Trả link cũ; true nghĩa là dùng lại, không sinh mã mới.
                 return@use Creation(existing, true)
             }
+            // Ghi nhận thời điểm tạo link.
             val createdAt = Instant.now().toString()
+            // Lưu URL gốc; SQLite tự cấp ID cho bản ghi mới.
             connection.prepareStatement("INSERT INTO links (long_url, redirect_status, created_at) VALUES (?, ?, ?)").use {
                 it.setString(1, longUrl)
                 it.setInt(2, redirectStatus)
                 it.setString(3, createdAt)
                 it.executeUpdate()
             }
+            // Lấy ID vừa tạo trên chính kết nối này.
             val id = connection.createStatement().use { statement ->
                 statement.executeQuery("SELECT last_insert_rowid()").use { it.next(); it.getLong(1) }
             }
+            // Đổi ID sang Base62: ID 1 ra "1", ID 15 ra "f".
             val code = Base62.encode(id)
+            // Lưu mã ngắn vào đúng bản ghi vừa thêm.
             connection.prepareStatement("UPDATE links SET short_code = ? WHERE id = ?").use {
                 it.setString(1, code)
                 it.setLong(2, id)
                 it.executeUpdate()
             }
+            // Xác nhận lưu cả URL gốc và mã ngắn.
             connection.commit()
+            // Trả link mới; false nghĩa là không dùng lại link cũ.
             Creation(Link(id, code, longUrl, redirectStatus, createdAt), false)
         } catch (error: Exception) {
+            // Có lỗi thì hủy các thay đổi trong lần tạo này.
             runCatching { connection.rollback() }
             throw error
         }

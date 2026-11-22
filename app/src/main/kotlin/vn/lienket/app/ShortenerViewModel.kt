@@ -43,33 +43,47 @@ class ShortenerViewModel(
     val state = mutableState.asStateFlow()
 
     fun updateInput(value: String) {
+        // Đang xử lý thì không nhận thay đổi URL.
         if (mutableState.value.isLoading) return
+        // Giữ lại nội dung khi màn hình được tạo lại.
         savedState["input"] = value
+        // Cập nhật ô nhập và xóa lỗi cũ.
         mutableState.update { it.copy(input = value, error = null) }
     }
 
     fun shorten() {
+        // Chặn gửi thêm khi yêu cầu trước chưa xong.
         if (mutableState.value.isLoading) return
+        // Kiểm tra URL và bỏ khoảng trắng ở hai đầu.
         val url = try { UrlValidator.validate(mutableState.value.input) }
         catch (_: IllegalArgumentException) {
+            // URL sai thì báo lỗi và dừng, không gửi lên server.
             mutableState.update { it.copy(error = UrlValidator.INVALID_MESSAGE, result = null, message = "") }
             savedState["result"] = null
             return
         }
+        // Lấy địa chỉ server đang cấu hình.
         val serverUrl = mutableState.value.serverUrl
         savedState["result"] = null
+        // Bật trạng thái đang xử lý và xóa kết quả cũ.
         mutableState.update { it.copy(isLoading = true, error = null, result = null, copied = false, manualCopy = false, message = "Đang tạo liên kết của bạn...") }
+        // Gửi yêu cầu mà không chặn giao diện.
         viewModelScope.launch {
             try {
+                // Gọi repository gửi URL lên server và chờ kết quả.
                 val link = repository.create(serverUrl, url)
+                // Giữ kết quả để phục hồi khi màn hình được tạo lại.
                 savedState["result"] = Json.encodeToString(link)
+                // Đưa kết quả ra giao diện; reused cho biết link đã có trước đó.
                 mutableState.update { it.copy(result = link, message = if (link.reused)
                     "Liên kết này đã được tạo trước đó. Bạn có thể dùng lại ngay." else "Đã tạo liên kết ngắn thành công.") }
             } catch (error: CancellationException) { throw error }
             catch (error: ApiException) {
+                // Hiển thị lỗi từ repository.
                 mutableState.update { if (error.status == 422) it.copy(error = error.message, message = "") else it.copy(message = error.message.orEmpty()) }
             } catch (_: Exception) {
                 mutableState.update { it.copy(message = "Có lỗi xảy ra. Bạn hãy thử lại.") }
+            // Dù thành công hay lỗi, kết thúc trạng thái đang xử lý.
             } finally { mutableState.update { it.copy(isLoading = false) } }
         }
     }

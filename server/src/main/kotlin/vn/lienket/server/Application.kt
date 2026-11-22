@@ -62,15 +62,22 @@ fun Application.shortenerModule(settings: Settings, service: LinkService = LinkS
             withContext(Dispatchers.IO) { service.database.healthy() }
             call.respond(HealthResponse())
         }
+        // Nhận yêu cầu rút gọn URL từ app.
         post("/api/v1/links") {
+            // Đọc nội dung gửi lên thành JSON.
             val element = apiJson.parseToJsonElement(call.receiveText())
+            // JSON phải là một đối tượng và long_url phải là chuỗi.
             require(element is JsonObject)
             require((element["long_url"] as? JsonPrimitive)?.isString == true)
+            // Nếu có redirect_status thì giá trị phải là số nguyên.
             element["redirect_status"]?.let { value ->
                 require(value is JsonPrimitive && !value.isString && value.content.toIntOrNull() != null)
             }
+            // Chuyển JSON thành dữ liệu đầu vào cho service.
             val request = apiJson.decodeFromJsonElement<CreateLinkRequest>(element)
+            // Xử lý tạo link trên luồng dành cho đọc/ghi dữ liệu.
             val result = withContext(Dispatchers.IO) { service.create(request) }
+            // Trả kết quả dạng JSON: 200 nếu dùng lại, 201 nếu tạo mới.
             call.respond(if (result.reused) HttpStatusCode.OK else HttpStatusCode.Created, result)
         }
         get("/api/v1/links/{code}") {
